@@ -8,11 +8,12 @@ que el cliente pueda consultar el progreso después.
 from typing import List
 
 from celery.result import AsyncResult
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
+from app import metals
 from app.celery_app import celery_app
-from app.tasks import resize_image, send_bulk_emails
+from app.tasks import resize_image, send_bulk_emails, update_metal_prices
 
 app = FastAPI(title="Sistema de Gestión de Tareas Distribuidas")
 
@@ -58,6 +59,39 @@ def get_status(task_id: str):
         response["error"] = str(result.info)         # la excepción, si falló
 
     return response
+
+
+# --- Monitor de precios de metales ---
+@app.post("/metals/update")
+def submit_metals_update():
+    """Encola una actualización inmediata de precios (además de la automática)."""
+    task = update_metal_prices.delay()
+    return {"task_id": task.id, "status": "encolada"}
+
+
+@app.get("/metals/prices")
+def get_metal_prices():
+    """Comparación actual: último precio, variaciones y ratio oro/plata."""
+    comparacion = metals.build_comparison(metals.get_redis())
+    if not comparacion["metales"]:
+        raise HTTPException(
+            status_code=404,
+            detail="Aún no hay precios guardados. Llama a POST /metals/update o espera a la próxima actualización.",
+        )
+    return comparacion
+
+
+@app.get("/metals/history/{symbol}")
+def get_metal_history(symbol: str, limit: int = Query(50, ge=1, le=500)):
+    """Historial de un metal: HG (cobre), XAU (oro) o XAG (plata)."""
+    symbol = symbol.upper()
+    if symbol not in metals.METALES:
+        raise HTTPException(status_code=404, detail=f"Usa uno de: {', '.join(metals.METALES)}")
+    return {
+        "simbolo": symbol,
+        "metal": metals.METALES[symbol]["nombre"],
+        "historial": metals.get_history(metals.get_redis(), symbol, limit),
+    }
 
 
 @app.get("/")

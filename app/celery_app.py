@@ -34,3 +34,14 @@ celery_app.conf.update(
     enable_utc=True,
     result_expires=3600,          # los resultados se borran de Redis tras 1 hora
 )
+
+# CELERY BEAT: el "reloj" que lanza tareas automáticamente cada cierto tiempo.
+# Aquí actualizamos los precios de los metales cada METALS_UPDATE_MINUTES minutos.
+metals_update_minutes = float(os.getenv("METALS_UPDATE_MINUTES", "15"))
+
+celery_app.conf.beat_schedule = {
+    "actualizar-precios-metales": {
+        "task": "tasks.update_metal_prices",
+        "schedule": metals_update_minutes * 60,
+    },
+}
