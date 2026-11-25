@@ -340,7 +340,7 @@ function dibujarGraficoGrande() {
       plugins: { legend: { display: false }, tooltip: { backgroundColor: "#1b232e", borderColor: "rgba(255,255,255,.1)", borderWidth: 1, padding: 10, callbacks: { label: c => " " + usd(c.parsed.y, metalActivo === "HG" ? 4 : 2) } } },
       scales: {
         x: { ticks: { color: "#8b97a7", maxTicksLimit: 8 }, grid: { color: "rgba(255,255,255,.04)" } },
-        y: { ticks: { color: "#8b97a7", callback: v => usd(v, metalActivo === "HG" ? 2 : 0) }, grid: { color: "rgba(255,255,255,.06)" } },
+        y: { ticks: { color: "#8b97a7", callback: v => usd(v, metalActivo === "XAU" ? 0 : 2) }, grid: { color: "rgba(255,255,255,.06)" } },
       },
     },
   });
