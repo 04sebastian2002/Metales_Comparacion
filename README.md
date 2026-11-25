@@ -8,6 +8,12 @@ Sistema de **tareas distribuidas en segundo plano**: una API recibe los pedidos 
 ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 
+## 🖥️ Panel visual
+
+![Panel de monitoreo de metales](docs/dashboard.png)
+
+*Captura con datos de ejemplo.* Al levantar el proyecto, abre **http://localhost:8000** para ver los precios del cobre, oro y plata con gráficos, variaciones e indicadores. La pantalla se refresca cada minuto y tiene un botón para actualizar al instante.
+
 ## Arquitectura
 
 ```
@@ -72,8 +78,11 @@ cd task-worker-system
 docker compose up --build
 ```
 
+> En Windows, si `docker` abre una ventana preguntando con qué programa abrirlo, usa `docker.exe compose up --build`.
+
 | URL | Qué es |
 |---|---|
+| http://localhost:8000 | **Panel visual** de precios de metales |
 | http://localhost:8000/docs | Documentación interactiva de la API (Swagger) |
 | http://localhost:5555 | Panel de monitoreo Flower |
 

@@ -5,10 +5,13 @@ Su única responsabilidad es RECIBIR peticiones y ENCOLAR tareas. Nunca ejecuta
 el trabajo pesado: lo delega al worker y devuelve un task_id al instante para
 que el cliente pueda consultar el progreso después.
 """
+from pathlib import Path
 from typing import List
 
 from celery.result import AsyncResult
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app import metals
@@ -94,6 +97,18 @@ def get_metal_history(symbol: str, limit: int = Query(50, ge=1, le=500)):
     }
 
 
-@app.get("/")
+STATIC_DIR = Path(__file__).parent / "static"
+DASHBOARD = STATIC_DIR / "dashboard.html"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+# --- Panel visual (dashboard) ---
+@app.get("/", include_in_schema=False)
+def dashboard():
+    """Panel web con los precios de los metales: http://localhost:8000"""
+    return FileResponse(DASHBOARD)
+
+
+@app.get("/health")
 def health():
     return {"servicio": "task-worker", "estado": "ok"}
