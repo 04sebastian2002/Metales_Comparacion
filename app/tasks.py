@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from app import metals
 from app.celery_app import celery_app
 
 
@@ -61,3 +62,42 @@ def send_bulk_emails(self, recipients: list, subject: str, body: str):
         )
 
     return {"enviados": total, "asunto": subject, "destinatarios": enviados}
+
+
+@celery_app.task(
+    bind=True,
+    name="tasks.update_metal_prices",
+    autoretry_for=(OSError,),   # errores de red: reintenta solo
+    retry_backoff=True,
+    max_retries=3,
+)
+def update_metal_prices(self):
+    """
+    Consulta el precio actual del cobre, oro y plata y lo guarda en el historial.
+
+    Se ejecuta solo cada cierto tiempo gracias a Celery Beat (ver celery_app.py),
+    y también se puede lanzar a mano desde la API con POST /metals/update.
+    """
+    r = metals.get_redis()
+    total = len(metals.METALES)
+    lecturas = []
+    errores = {}
+
+    for i, symbol in enumerate(metals.METALES, start=1):
+        try:
+            price = metals.fetch_price(symbol)
+        except Exception as exc:  # un metal que falla no detiene a los demás
+            errores[symbol] = str(exc)
+            continue
+        reading = metals.build_reading(symbol, price)
+        metals.save_reading(r, reading)
+        lecturas.append(reading)
+        self.update_state(
+            state="PROGRESS",
+            meta={"metal": reading["metal"], "percent": int(i / total * 100)},
+        )
+
+    if not lecturas:
+        raise OSError(f"No se pudo obtener ningún precio: {errores}")
+
+    return {"lecturas": lecturas, "errores": errores}

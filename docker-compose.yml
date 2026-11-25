@@ -16,6 +16,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - METALS_REDIS_URL=redis://redis:6379/2
     depends_on:
       - redis
 
@@ -29,10 +30,24 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - METALS_REDIS_URL=redis://redis:6379/2
     depends_on:
       - redis
 
-  # 4) Flower: panel web para monitorear las tareas (http://localhost:5555)
+  # 4) Beat: el "reloj" que lanza la actualización de precios de metales
+  #    cada METALS_UPDATE_MINUTES minutos (el worker es quien la ejecuta)
+  beat:
+    build: .
+    command: "celery -A app.celery_app:celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - METALS_UPDATE_MINUTES=15
+    depends_on:
+      - redis
+      - worker
+
+  # 5) Flower: panel web para monitorear las tareas (http://localhost:5555)
   flower:
     build: .
     command: "celery -A app.celery_app:celery_app flower --port=5555"
